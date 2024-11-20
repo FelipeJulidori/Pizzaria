@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD de Funcionários</title>
+    <!-- Link do CSS do Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-5">
+    <h1 class="mb-4">Funcionários</h1>
+
+    <form id="funcionarioForm" class="mb-4">
+        <div class="form-group">
+            <label for="funcionarioId">ID do Funcionário:</label>
+            <input type="number" id="funcionarioId" class="form-control" disabled>
+        </div>
+        
+        <div class="form-group">
+            <label for="funcionarioNome">Nome:</label>
+            <input type="text" id="funcionarioNome" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="funcionarioEmail">Email:</label>
+            <input type="email" id="funcionarioEmail" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="funcionarioCargo">Função:</label>
+            <select id="funcionarioCargo" class="form-control" required>
+                <option value="">Selecione uma função</option>
+                <option value="Gerente">Gerente</option>
+                <option value="Atendente">Atendente</option>
+                <option value="Cozinheiro">Cozinheiro</option>
+                <option value="Entregador">Entregador</option>
+            </select>
+        </div>
+        
+        <button type="submit" id="submitButton" class="btn btn-primary">Adicionar Funcionário</button>
+    </form>
+
+    <h2 class="mb-3">Lista de Funcionários</h2>
+    <table id="funcionarioTable" class="table table-striped table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Função</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const funcionarioForm = document.getElementById('funcionarioForm');
+    const funcionarioTable = document.getElementById('funcionarioTable').getElementsByTagName('tbody')[0];
+    const submitButton = document.getElementById('submitButton');
+    let currentEditId = null;
+    let funcionarios = []; // Variável global para armazenar os funcionários
+
+    async function fetchFuncionarios() {
+        const response = await fetch('http://localhost:3000/funcionarios');
+        return await response.json();
+    }
+
+    async function displayFuncionarios() {
+        funcionarios = await fetchFuncionarios(); // Armazena os funcionários
+        funcionarioTable.innerHTML = '';
+
+        funcionarios.forEach(funcionario => {
+            const row = funcionarioTable.insertRow();
+            row.insertCell(0).textContent = funcionario.id;
+            row.insertCell(1).textContent = funcionario.nome;
+            row.insertCell(2).textContent = funcionario.email;
+            row.insertCell(3).textContent = funcionario.função;
+            const actionsCell = row.insertCell(4);
+            actionsCell.innerHTML = `
+                <button class="btn btn-warning btn-sm mr-1" onclick="editFuncionario(${funcionario.id})">Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteFuncionario(${funcionario.id})">Deletar</button>
+            `;
+        });
+    }
+
+    funcionarioForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const nome = document.getElementById('funcionarioNome').value;
+        const email = document.getElementById('funcionarioEmail').value;
+        const cargo = document.getElementById('funcionarioCargo').value;
+
+        if (currentEditId) {
+            // Atualiza funcionário existente
+            await fetch(`http://localhost:3000/funcionarios/${currentEditId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nome, email, função: cargo })
+            });
+            currentEditId = null;
+            submitButton.textContent = "Adicionar Funcionário";
+        } else {
+            // Adiciona novo funcionário
+            await fetch('http://localhost:3000/funcionarios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nome, email, função: cargo })
+            });
+        }
+
+        displayFuncionarios();
+        funcionarioForm.reset();
+    });
+
+    async function deleteFuncionario(id) {
+        await fetch(`http://localhost:3000/funcionarios/${id}`, {
+            method: 'DELETE'
+        });
+        displayFuncionarios();
+    }
+
+    function editFuncionario(id) {
+        const funcionario = funcionarios.find(f => f.id === id); // Usa a variável global
+        if (funcionario) {
+            document.getElementById('funcionarioId').value = funcionario.id;
+            document.getElementById('funcionarioNome').value = funcionario.nome;
+            document.getElementById('funcionarioEmail').value = funcionario.email;
+            document.getElementById('funcionarioCargo').value = funcionario.função;
+            currentEditId = funcionario.id;
+            submitButton.textContent = "Atualizar Funcionário";
+        }
+    }
+
+    // Carregar funcionários ao iniciar
+    displayFuncionarios();
+</script>
+<!-- Script do Bootstrap -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
